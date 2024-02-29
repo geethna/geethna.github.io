@@ -2,7 +2,7 @@
 title: Debugging using GDB
 date: 2018-06-06 00:00:00 +0530
 categories: [RE]
-tags: [RE]
+tags: [re]
 ---
 
 So here I am, up with my first blog post. This post is basically an intro on how to debug a program using gdb.
