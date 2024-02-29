@@ -29,7 +29,7 @@ So now we have to understand those instructions to get the flag.
 
 ### What is happening inside :
 
-![alt text](assets/lib/forgetfulcommander1.png "forgetfulcommander1")
+![alt text](assets/images/forgetfulcommander1.png "forgetfulcommander1")
 
 The input is given as the command line argument. It then reads the flags and checks for the trap flag (number : `0x0100`). If it is set the value `v8` will be set to `0x40` (using `ror 0x0100 ,2`), else it will be set to `5`. So the above check can be anti-debugging check.Then there comes a simple input check.
 

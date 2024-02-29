@@ -88,7 +88,7 @@ while(s.check()==sat):
 
 The challenge has 7 nested loops in it. From the innermost loop, we can understand that the string contains 20 characters. Also the check is a linear equation with 20 variables. To solve a linear equation of 20 variables, we need only 20 equations (Think in the matrix way). So what I did is generated 20 equations (So basically didn’t have to go through all the loops 😉 ). The pseudo-code generated in IDA looks something like this:
 
-![alt text](assets/lib/z3-babyfirst.png "z3-babyfirst")
+![alt text](assets/images/z3-babyfirst.png "z3-babyfirst")
 
 Below is the code I used to generated the correct flag:
 
