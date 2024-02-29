@@ -22,7 +22,7 @@ First to check whether gdb is installed in you system or not try this command in
 gdb --version
 ```
 
-If that doesn’t work then you can probably check out this [link](http://www.gdbtutorial.com/tutorial/how-install-gdb). It explains how to install gdb very clearly.
+If that doesn’t work then you can probably check out this [link](https://www.gdbtutorial.com/tutorial/how-install-gdb). It explains how to install gdb very clearly.
 
 ### Getting Started:
 
