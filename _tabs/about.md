@@ -4,8 +4,6 @@ icon: fas fa-info-circle
 order: 4
 ---
 
+Hey there! I'm Geethna, a cybersecurity enthusiast and problem solver with a knack for unraveling digital mysteries. With a background in Android Reverse Engineering and System Security, I've dived headfirst into into Penetration Testing and vulnerability analysis, armed with a degree in Computer Engineering.
 
-A seasoned cybersecurity professional with a fervor for addressing complex security challenges, boasting a robust background in Android Reverse
-Engineering, web application, and system security. Skilled in Python and C, with proficiency in Penetration Testing and vulnerability analysis.
-Armedwith a bachelor’s degree in Computer Engineering, brings a unique blend of inquisitiveness, diligence, and expertise to craft robust solutions
-in the dynamic field of cybersecurity.
+When I'm not tinkering with code or brushing up on the latest security trends, you can find me jamming on my guitar or piano, hanging out with my furry friend, or exploring the great outdoors. I'm a travel junkie too, always on the lookout for new places around the globe 🚀✨
