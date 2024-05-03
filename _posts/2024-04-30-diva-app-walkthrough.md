@@ -12,7 +12,7 @@ Then I came across the [DIVA](https://github.com/payatu/diva-android) apk by Pay
 It contains a total of 13 vulnerabilities. I will be covering each of these issues section by section. 
 
 
-### LogActivity
+### InsecureLogging
 
 
 I started by analysing the LogActivity. 
@@ -63,7 +63,7 @@ adb shell logcat | grep 2411
 ![alt text](assets/images/log2.png "log2")
 
 
-### HardCoding - Part1
+### HardCoding Issues - Part 1
 
 Here, we can see that when a user inputs the a vendor key in in `hcKey` it takes it stores in a variable of type EditText.
 
@@ -82,7 +82,7 @@ Then it compares it with the hardcoded value "vendorsecretkey", if its correct a
 
 This was fairly very easy but very important. We can see that the developer has hardcoded the value of the supposedly "secret" vendor key which makes it easy for any user with the apk to get this value and use it for further attacks. 
 
-### InsecureDataStorage Part 1
+### InsecureDataStorage - Part 1
 
 When we click on this option, we can see that we are supposed to enter a third party username and password which is stored in the app. A notification is printed when the storage is successful - "3rd party credentials saved successfully!". 
 
@@ -122,7 +122,7 @@ adb shell cat /data/data/jakhar.aseem.diva/shared_prefs/jakhar.aseem.diva_prefer
 
 So in conclusion I understood that it is not possible for another app to access this data without other privileges like Content Providers, App-to-App Communication or Permissions. But we can see that the key pairs are stored in plaintext which again is very insecure method to store data. 
 
-### InsecureDataStorage Part 2
+### InsecureDataStorage - Part 2
 
 Again, the basic functionality is the same but the data is stored in an SQL databased name - `ids2`. 
 
@@ -157,7 +157,7 @@ This is stored in the path `/data/data/jakhar.aseem.diva/databases/ids2`, so I f
 
 I could see the credentials I entered stored in plaintext. 
 
-### InsecureDataStorage Part 3
+### InsecureDataStorage - Part 3
 
 This time again, the functionality is same but the data is stored in a different way. 
 
@@ -192,7 +192,7 @@ adb shell ls /data/data/jakhar.aseem.diva/
 Everytime a new pair is stored a temporary file is created. 
 One such file was `uinfo604414850tmp` at my end and the contents had these credentials stored
 
-### InsecureDataStorage Part 4
+### InsecureDataStorage - Part 4
 
 The same functionality but this time it is writing to external storage. I was using an emulated device Pixel 4 - API 23 (Android 6.0) but when I tried to save the credentials, I kept getting an error. When I checked the logs, it was : 
 
@@ -203,8 +203,238 @@ It could be due to the app does not having permission to write to external stora
 So I was unable to get this working, but from what I know this file would be saved in the `/sdcard/` directory. So we can use the adb command to navigate to that and cat the contents of `uinfo.txt`. 
 
 
-This walkthrough has become longer than I expected, so I decided to make a Part2 and add the rest of the challenges in it. 
+### Input Validation Issues - Part 1
 
-Hope you found this helpful, see you in the next blog! 
+In this challenge the app takes a username as input in the textbox and prints out the details if the user exists. It is mentioned that there is no input validation done when checking for a user.
+There are 3 users stored by default and the objective is to find a payload which will printout the details of all these user's. 
+
+This is vulnerable part of the code : 
+
+```java
+    public void search(View view) {
+        EditText srchtxt = (EditText) findViewById(R.id.ivi1search);
+        try {
+            Cursor cr = this.mDB.rawQuery("SELECT * FROM sqliuser WHERE user = '" + srchtxt.getText().toString() + "'", null);
+            StringBuilder strb = new StringBuilder("");
+            if (cr != null && cr.getCount() > 0) {
+                cr.moveToFirst();
+                do {
+                    strb.append("User: (" + cr.getString(0) + ") pass: (" + cr.getString(1) + ") Credit card: (" + cr.getString(2) + ")\n");
+                } while (cr.moveToNext());
+            } else {
+                strb.append("User: (" + srchtxt.getText().toString() + ") not found");
+            }
+            Toast.makeText(this, strb.toString(), 0).show();
+        } catch (Exception e) {
+            Log.d("Diva-sqli", "Error occurred while searching in database: " + e.getMessage());
+        }
+    }
+``` 
+
+The `cr` variable will store the output of this command. And it will print out each row of cr one by one, until the count is 0. 
+
+payload : `'' OR '1'='1'`
+
+Gives the output : 
+
+![alt text](assets/images/sql1.png "sql1")
 
 
+### Input Validation Issues - Part 2
+
+In this challenge, we are supposed to enter a URL and it loads the URL obtained from the EditText into the WebView (wview). It instructs the WebView to navigate to the URL specified by the user input.
+
+```java
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_input_validation2_urischeme);
+        WebView wview = (WebView) findViewById(R.id.ivi2wview);
+        WebSettings wset = wview.getSettings();
+        wset.setJavaScriptEnabled(true);
+    }
+
+    public void get(View view) {
+        EditText uriText = (EditText) findViewById(R.id.ivi2uri);
+        WebView wview = (WebView) findViewById(R.id.ivi2wview);
+        wview.loadUrl(uriText.getText().toString());
+    }
+```
+
+I also noticed that `setJavaScriptEnabled(true)`. This method enables JavaScript execution in the WebView. By default, JavaScript is disabled for security reasons. Enabling JavaScript allows the WebView to interpret and execute JavaScript code embedded in web pages.
+
+I tried to inject javascript, but I did not get anything fruitful. 
+
+The objective of this challenge is to try and access sensitive information. So let's try to access a file using this functionality. 
+
+I tried to display the shared preferences file which we mentioned earlier, at this path - `/data/data/jakhar.aseem.diva/shared_prefs/jakhar.aseem.diva_preferences.xml`
+
+![alt text](assets/images/url1.png "url1")
+
+Sucessful! 
+
+### Access Control Issues - Part 1
+
+The challenge is pretty simple. When we click the `VIEW API CREDENTIALS` button, it dispalyes the secret credentials. 
+
+We have to find a way to get these credentials or open this intent outside of the app. 
+
+We can try and identify the activity which is triggered when we click on this button using the logs : 
+
+`2068 I ActivityManager: START u0 {act=jakhar.aseem.diva.action.VIEW_CREDS cmp=jakhar.aseem.diva/.APICredsActivity} from uid 10055 on display 0
+`
+
+In the source code we can see that this acticity is defined in the manifest file with intent-filters, which means this activity is exported and any external app can start this acticity. 
+
+```java
+ <activity
+            android:label="@string/apic_label"
+            android:name="jakhar.aseem.diva.APICredsActivity">
+            <intent-filter>
+                <action android:name="jakhar.aseem.diva.action.VIEW_CREDS"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+            </intent-filter>
+        </activity>
+```
+
+So using the adb command we can trigger this activcity outside the app : 
+
+`adb shell am start -n jakhar.aseem.diva/.APICredsActivity`
+
+### Access Control Issues - Part 2
+
+I used the text search in jadx to find the class where the methods triggering this issue was defined. This can also be found using logcat. 
+
+The challenge here again is to access the API credentials outside of the app. 
+
+We can follow the same steps as before to trigger the activity outside of the app using adb shell since it is exported. But when we do that the activity will open the `Enter PIN` page. 
+
+The reason is due to a check happening here : 
+
+```java
+boolean bcheck = i.getBooleanExtra(getString(R.string.chk_pin), true);
+        if (!bcheck) {
+            apicview.setText("TVEETER API Key: secrettveeterapikey\nAPI User name: diva2\nAPI Password: p@ssword2");
+            return;
+        }
+```
+
+We can only get these credentials if the `chk_pin` value is set to false. 
+
+To find the variable name we can go to /res/values/strings.xml and seach for `chk_pin` 
+
+`<string name="chk_pin">check_pin</string>` - this is what we get
+
+Combining everything, the command is : 
+
+`adb shell am start -n jakhar.aseem.diva/.APICreds2Activity --ez check_pin false`
+
+The `--ez` flag is used to specify a boolean extra. 
+
+### Access Control Issues - Part 3
+
+In this challenge, we can access private notes after creating a PIN once. We are supposed to access these private notes outside of the app without knowing the PIN. 
+
+The main classes to start looking are `AccessControl3Activity` and `AccessControl3NotesActivity`. 
+
+The second activity is launched when we click `VIEW PRIVATE NOTES` button. 
+
+Here, we can see that the `accessNotes` method checks the pin entered. It retrieves the user-entered PIN from an EditText field (pinTxt). It retrieves the saved PIN from SharedPreferences (spref). It compares the user-entered PIN with the saved PIN.
+
+```java
+        if (userpin.equals(pin)) {
+            ListView lview = (ListView) findViewById(R.id.aci3nlistView);
+            Cursor cr = getContentResolver().query(NotesProvider.CONTENT_URI, new String[]{"_id", "title", "note"}, null, null, null);
+            String[] columns = {"title", "note"};
+            int[] fields = {R.id.title_entry, R.id.note_entry};
+            SimpleCursorAdapter adapter = new SimpleCursorAdapter(this, R.layout.notes_entry, cr, columns, fields, 0);
+            lview.setAdapter((ListAdapter) adapter);
+            pinTxt.setVisibility(4);
+            abutton.setVisibility(4);
+            return;
+        }
+```
+
+If the user-entered PIN matches the saved PIN, it:
+
+- Retrieves notes data from a content provider (NotesProvider.CONTENT_URI).
+- Sets up a SimpleCursorAdapter to display the notes data in a ListView (lview).
+- Hides the PIN EditText field and the access button (pinTxt and abutton).
+
+If the user-entered PIN does not match the saved PIN, it shows a toast message indicating that a valid PIN should be entered.
+
+In this challenge the objective is to get the private notes without the PIN. I tried to access the NotesProvider Class and then searched for the `CONTENT_URI` : 
+
+`static final Uri CONTENT_URI = Uri.parse("content://jakhar.aseem.diva.provider.notesprovider/notes");`
+
+I could see that the `NotesProvider` is exported with `android:exported="true"` in the manifest file, it means that other apps or components outside of the app's package can access it. In this case, we can directly access the NotesProvider.CONTENT_URI from adb commands. 
+
+So the final adb command is : 
+
+`adb shell content query --uri content://jakhar.aseem.diva.provider.notesprovider/notes`
+
+Output
+
+```bash
+Row: 0 _id=5, title=Exercise, note=Alternate days running
+Row: 1 _id=4, title=Expense, note=Spent too much on home theater
+Row: 2 _id=6, title=Weekend, note=b333333333333r
+Row: 3 _id=3, title=holiday, note=Either Goa or Amsterdam
+Row: 4 _id=2, title=home, note=Buy toys for baby, Order dinner
+Row: 5 _id=1, title=office, note=10 Meetings. 5 Calls. Lunch with CEO
+```
+
+### HardCoding Issues - Part 2
+
+Started looking at the `Hardcode2Activity`. Nothing much, but we can see that it instantiates an object of type DivaJni. 
+
+Overall, this class is responsible for handling user input, passing it to a native method through the DivaJni object, and displaying a toast message based on the result of the method call. The actual logic of the access() method is implemented in the native code (likely written in C or C++) accessed through the DivaJni object.
+
+For this to give us access, the access method should return 0 by the end of execution. 
+
+Looked at the `DivaJni` class 
+
+```java
+package jakhar.aseem.diva;
+
+/* loaded from: classes.dex */
+public class DivaJni {
+    private static final String soName = "divajni";
+
+    public native int access(String str);
+
+    public native int initiateLaunchSequence(String str);
+
+    static {
+        System.loadLibrary(soName);
+    }
+}
+```
+
+We can see that a library is being loaded with the string `divajni`. So the actual name of the library will be something of this sort `libdivajni.so`. I was able to find that in the `/lib` directory. 
+
+Since I was using an M1 mac, I didn't have access to gdb or any other tools to decompile and I was too lazy to open up Ghidra. So I used an online decompiler https://dogbolt.org/ which gave me outputs from all these different tools (Huh, that worked out well!)
+
+I searched for the access function, since - `this.djni.access` was being called before the check was made. 
+
+```cpp
+//----- (000000000000059C) ----------------------------------------------------
+bool __fastcall Java_jakhar_aseem_diva_DivaJni_access(__int64 a1, __int64 a2, __int64 a3)
+{
+  const char *v3; // x0
+
+  v3 = (const char *)(*(__int64 (__fastcall **)(__int64, __int64, _QWORD))(*(_QWORD *)a1 + 1352LL))(a1, a3, 0LL);
+  return strncmp("olsdfgad;lh", v3, 0xBuLL) == 0;
+}
+
+```
+
+As we can see this is where the string comparison happens and if it matches with our input, it returns 0 which will give us "Access Granted". 
+
+I entered the string and it worked!
+
+### Input Validation Issues - Part 3
+
+
+TBA
+
+This walkthrough has become longer than I expected! But, I hope you found this helpful, see you in the next blog! 
