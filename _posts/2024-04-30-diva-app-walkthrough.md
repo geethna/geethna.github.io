@@ -1,5 +1,5 @@
 ---
-title: DIVA Android app Walkthrough - Part1
+title: DIVA Android app Walkthrough
 date: 2024-04-30 00:00:00 +0530
 categories: [Android]
 tags: [android, re]
@@ -9,8 +9,7 @@ As a part of my journey of learning android reversing, I started exploring diffe
 
 Then I came across the [DIVA](https://github.com/payatu/diva-android) apk by Payatu. This Damn insecure and vulnerable App) is an App intentionally designed to be insecure. It covers common vulnerabilities in Android apps ranging from insecure storage, input validation to access control issues.
 
-It contains a total of 13 vulnerabilities. I will be covering each of these issues section by section. 
-
+It contains a total of 13 vulnerabilities. I will be covering each of these issues in sections. 
 
 ### InsecureLogging
 
@@ -435,6 +434,34 @@ I entered the string and it worked!
 ### Input Validation Issues - Part 3
 
 
-TBA
+The objective of the challenge is to crash the application and if possible get code execution :P
 
-This walkthrough has become longer than I expected! But, I hope you found this helpful, see you in the next blog! 
+The starting parts of the challenge were the same, a function called `initiateLaunchSequence` is called and the input string is passed. 
+
+The function is defined in the .so file as mentioned previously. 
+
+This is the code : 
+
+```c
+bool __fastcall Java_jakhar_aseem_diva_DivaJni_initiateLaunchSequence(__int64 a1, __int64 a2, __int64 a3)
+{
+  const char *v3; // x0
+  char v5[24]; // [xsp+18h] [xbp-18h] BYREF
+
+  v3 = (const char *)(*(__int64 (__fastcall **)(__int64, __int64, _QWORD))(*(_QWORD *)a1 + 1352LL))(a1, a3, 0LL);
+  strcpy(v5, v3);
+  if ( v5[0] == 33 )
+    v5[0] = 46;
+  return strncmp(".dotdot", v5, 7uLL) == 0;
+}
+```
+
+To crash this is pretty easy, we can see that `strcpy` is used here, which is vulnerable as there are no length checks, so we can get a buffer overflow and overwrite EIP. 
+
+The input string is copied to v5 which takes up 24 bytes the declaration `const char *v3` typically takes up 4 bytes of memory on a 32-bit system and 8 bytes on a 64-bit system for the pointer itself.
+
+So in total 24+8 = 32 bytes is enough to fill EBP, the next 8 bytes will overwrite EIP. To crash the app, any string over 26 characters will do the work. 
+
+The exploitation of this is a very long process requiring debug setups and frida hooking. I am looking forward to covering that in another blog. 
+
+This walkthrough has become longer than I expected! But, I hope you found this helpful!
