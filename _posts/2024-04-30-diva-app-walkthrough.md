@@ -1,7 +1,7 @@
 ---
 title: DIVA Android app Walkthrough
 date: 2024-04-30 00:00:00 +0530
-categories: [Android]
+categories: [Android, Pentesting]
 tags: [android, re]
 ---
 
